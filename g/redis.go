@@ -1,13 +1,15 @@
 package g
 
 import (
-	"github.com/garyburd/redigo/redis"
 	"log"
 	"time"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 var RedisConnPool *redis.Pool
 
+//初始化redis连接池
 func InitRedisConnPool() {
 	if !Config().Alarm.Enabled {
 		return
@@ -35,6 +37,7 @@ func InitRedisConnPool() {
 	}
 }
 
+// redis连通性，t未使用
 func PingRedis(c redis.Conn, t time.Time) error {
 	_, err := c.Do("ping")
 	if err != nil {

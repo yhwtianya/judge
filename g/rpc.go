@@ -1,18 +1,20 @@
 package g
 
 import (
-	"github.com/toolkits/net"
 	"log"
 	"math"
 	"net/rpc"
 	"sync"
 	"time"
+
+	"github.com/toolkits/net"
 )
 
+// 封装RpcClient
 type SingleConnRpcClient struct {
 	sync.Mutex
 	rpcClient  *rpc.Client
-	RpcServers []string
+	RpcServers []string // rpc server地址，可以多个
 	Timeout    time.Duration
 }
 
@@ -23,6 +25,7 @@ func (this *SingleConnRpcClient) close() {
 	}
 }
 
+// 确保有一个rpc连接
 func (this *SingleConnRpcClient) insureConn() {
 	if this.rpcClient != nil {
 		return
@@ -37,6 +40,7 @@ func (this *SingleConnRpcClient) insureConn() {
 		}
 
 		for _, s := range this.RpcServers {
+			//获得JsonRpcClient
 			this.rpcClient, err = net.JsonRpcClient("tcp", s, this.Timeout)
 			if err == nil {
 				return
@@ -55,6 +59,7 @@ func (this *SingleConnRpcClient) insureConn() {
 	}
 }
 
+// 通过rpc进行调用
 func (this *SingleConnRpcClient) Call(method string, args interface{}, reply interface{}) error {
 
 	this.Lock()

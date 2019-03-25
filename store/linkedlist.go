@@ -2,8 +2,9 @@ package store
 
 import (
 	"container/list"
-	"github.com/open-falcon/common/model"
 	"sync"
+
+	"github.com/open-falcon/common/model"
 )
 
 type SafeLinkedList struct {
@@ -46,8 +47,10 @@ func (this *SafeLinkedList) HistoryData(limit int) ([]*model.HistoryData, bool) 
 	var vs []*model.HistoryData
 	isEnough := true
 
+	// firstItem.JudgeType取值为GAUGE或COUNTER或DERIVE
 	judgeType := firstItem.JudgeType[0]
 	if judgeType == 'G' || judgeType == 'g' {
+		//GAUGE类型
 		if size < limit {
 			// 有多少获取多少
 			limit = size
@@ -67,6 +70,7 @@ func (this *SafeLinkedList) HistoryData(limit int) ([]*model.HistoryData, bool) 
 			currentElement = nextElement
 		}
 	} else {
+		//COUNTER或DERIVE类型
 		if size < limit+1 {
 			isEnough = false
 			limit = size - 1

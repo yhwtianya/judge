@@ -1,9 +1,10 @@
 package g
 
 import (
-	"github.com/open-falcon/common/model"
 	"sync"
 	"time"
+
+	"github.com/open-falcon/common/model"
 )
 
 type SafeStrategyMap struct {
@@ -31,6 +32,7 @@ var (
 	LastEvents    = &SafeEventMap{M: make(map[string]*model.Event)}
 )
 
+// 初始化Hbs的Rpc客户端
 func InitHbsClient() {
 	HbsClient = &SingleConnRpcClient{
 		RpcServers: Config().Hbs.Servers,
