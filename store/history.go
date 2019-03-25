@@ -45,6 +45,7 @@ func (this *JudgeItemMap) Delete(key string) {
 	delete(this.M, key)
 }
 
+// 批量删除
 func (this *JudgeItemMap) BatchDelete(keys []string) {
 	count := len(keys)
 	if count == 0 {
@@ -88,6 +89,7 @@ func (this *JudgeItemMap) PushFrontAndMaintain(key string, val *model.JudgeItem,
 		NL := list.New()
 		NL.PushFront(val)
 		safeList := &SafeLinkedList{L: NL}
+		// 保存到JudgeItemMap中
 		this.Set(key, safeList)
 		Judge(safeList, val, now)
 	}
@@ -96,7 +98,7 @@ func (this *JudgeItemMap) PushFrontAndMaintain(key string, val *model.JudgeItem,
 // 这是个线程不安全的大Map，需要提前初始化好
 var HistoryBigMap = make(map[string]*JudgeItemMap)
 
-// 创建16*16=256个key的map，map值类型为双向链表
+// 创建16*16=256个key的map，map值类型为链表
 func InitHistoryBigMap() {
 	arr := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"}
 	for i := 0; i < 16; i++ {

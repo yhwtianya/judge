@@ -12,6 +12,7 @@ type SafeLinkedList struct {
 	L *list.List
 }
 
+// 转成切片
 func (this *SafeLinkedList) ToSlice() []*model.JudgeItem {
 	this.RLock()
 	defer this.RUnlock()
@@ -27,6 +28,7 @@ func (this *SafeLinkedList) ToSlice() []*model.JudgeItem {
 	return ret
 }
 
+// 获取limit个历史数据
 // @param limit 至多返回这些，如果不够，有多少返回多少
 // @return bool isEnough
 func (this *SafeLinkedList) HistoryData(limit int) ([]*model.HistoryData, bool) {
@@ -50,7 +52,7 @@ func (this *SafeLinkedList) HistoryData(limit int) ([]*model.HistoryData, bool) 
 	// firstItem.JudgeType取值为GAUGE或COUNTER或DERIVE
 	judgeType := firstItem.JudgeType[0]
 	if judgeType == 'G' || judgeType == 'g' {
-		//GAUGE类型
+		//GAUGE类型，取原始数据
 		if size < limit {
 			// 有多少获取多少
 			limit = size
@@ -70,7 +72,7 @@ func (this *SafeLinkedList) HistoryData(limit int) ([]*model.HistoryData, bool) 
 			currentElement = nextElement
 		}
 	} else {
-		//COUNTER或DERIVE类型
+		//COUNTER或DERIVE类型，需要计算差值，n个差值需要n+1个原始数据
 		if size < limit+1 {
 			isEnough = false
 			limit = size - 1
@@ -96,12 +98,14 @@ func (this *SafeLinkedList) HistoryData(limit int) ([]*model.HistoryData, bool) 
 	return vs, isEnough
 }
 
+// 首部插入数据
 func (this *SafeLinkedList) PushFront(v interface{}) *list.Element {
 	this.Lock()
 	defer this.Unlock()
 	return this.L.PushFront(v)
 }
 
+// 先对合法性进行检查，然后首部插入数据
 // @return needJudge 如果是false不需要做judge，因为新上来的数据不合法
 func (this *SafeLinkedList) PushFrontAndMaintain(v *model.JudgeItem, maxCount int) bool {
 	this.Lock()
@@ -130,12 +134,14 @@ func (this *SafeLinkedList) PushFrontAndMaintain(v *model.JudgeItem, maxCount in
 	return true
 }
 
+// 返回最新一个数据
 func (this *SafeLinkedList) Front() *list.Element {
 	this.RLock()
 	defer this.RUnlock()
 	return this.L.Front()
 }
 
+// 返回长度
 func (this *SafeLinkedList) Len() int {
 	this.RLock()
 	defer this.RUnlock()

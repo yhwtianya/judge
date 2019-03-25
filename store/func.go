@@ -2,10 +2,11 @@ package store
 
 import (
 	"fmt"
-	"github.com/open-falcon/common/model"
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/open-falcon/common/model"
 )
 
 type Function interface {
@@ -25,6 +26,7 @@ func (this MaxFunction) Compute(L *SafeLinkedList) (vs []*model.HistoryData, lef
 		return
 	}
 
+	// 取最大值进行比较
 	max := vs[0].Value
 	for i := 1; i < this.Limit; i++ {
 		if max < vs[i].Value {
@@ -50,6 +52,7 @@ func (this MinFunction) Compute(L *SafeLinkedList) (vs []*model.HistoryData, lef
 		return
 	}
 
+	// 取最小值进行比较
 	min := vs[0].Value
 	for i := 1; i < this.Limit; i++ {
 		if min > vs[i].Value {
@@ -76,6 +79,7 @@ func (this AllFunction) Compute(L *SafeLinkedList) (vs []*model.HistoryData, lef
 	}
 
 	isTriggered = true
+	// 每个值均进行比较
 	for i := 0; i < this.Limit; i++ {
 		isTriggered = checkIsTriggered(vs[i].Value, this.Operator, this.RightValue)
 		if !isTriggered {
@@ -100,6 +104,7 @@ func (this SumFunction) Compute(L *SafeLinkedList) (vs []*model.HistoryData, lef
 		return
 	}
 
+	// 求和然后再比较
 	sum := 0.0
 	for i := 0; i < this.Limit; i++ {
 		sum += vs[i].Value
@@ -123,6 +128,7 @@ func (this AvgFunction) Compute(L *SafeLinkedList) (vs []*model.HistoryData, lef
 		return
 	}
 
+	// 求平均数再比较
 	sum := 0.0
 	for i := 0; i < this.Limit; i++ {
 		sum += vs[i].Value
@@ -206,6 +212,7 @@ func (this PDiffFunction) Compute(L *SafeLinkedList) (vs []*model.HistoryData, l
 	return
 }
 
+// 解析策略表达式，返回判断函数
 // @str: e.g. all(#3) sum(#3) avg(#10) diff(#10)
 func ParseFuncFromString(str string, operator string, rightValue float64) (fn Function, err error) {
 	idx := strings.Index(str, "#")
@@ -236,6 +243,7 @@ func ParseFuncFromString(str string, operator string, rightValue float64) (fn Fu
 	return
 }
 
+// 判断leftValue rightValue是否符合operator
 func checkIsTriggered(leftValue float64, operator string, rightValue float64) (isTriggered bool) {
 	switch operator {
 	case "=", "==":

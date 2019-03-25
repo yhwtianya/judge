@@ -71,6 +71,7 @@ func (this *SafeEventMap) Get(key string) (*model.Event, bool) {
 	return event, exists
 }
 
+// 更新item最新event
 func (this *SafeEventMap) Set(key string, event *model.Event) {
 	this.Lock()
 	defer this.Unlock()

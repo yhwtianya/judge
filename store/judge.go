@@ -3,9 +3,10 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+
 	"github.com/open-falcon/common/model"
 	"github.com/open-falcon/judge/g"
-	"log"
 )
 
 func Judge(L *SafeLinkedList, firstItem *model.JudgeItem, now int64) {
@@ -13,7 +14,9 @@ func Judge(L *SafeLinkedList, firstItem *model.JudgeItem, now int64) {
 	CheckExpression(L, firstItem, now)
 }
 
+// 判断最新数据是否触发策略，是否发送event
 func CheckStrategy(L *SafeLinkedList, firstItem *model.JudgeItem, now int64) {
+	// 根据Endpoint和Metric可快速获取对应的策略列表
 	key := fmt.Sprintf("%s/%s", firstItem.Endpoint, firstItem.Metric)
 	strategyMap := g.StrategyMap.Get()
 	strategies, exists := strategyMap[key]
@@ -27,6 +30,7 @@ func CheckStrategy(L *SafeLinkedList, firstItem *model.JudgeItem, now int64) {
 		// 所以此处要排除掉一部分
 		related := true
 		for tagKey, tagVal := range s.Tags {
+			// first必须符合strategy中的所有tag，first可以比strategy的tag多
 			if myVal, exists := firstItem.Tags[tagKey]; !exists || myVal != tagVal {
 				related = false
 				break
@@ -37,10 +41,12 @@ func CheckStrategy(L *SafeLinkedList, firstItem *model.JudgeItem, now int64) {
 			continue
 		}
 
+		// 判断是否触发策略,并判断是否发送event
 		judgeItemWithStrategy(L, s, firstItem, now)
 	}
 }
 
+// 判断是否触发策略,并判断是否发送event
 func judgeItemWithStrategy(L *SafeLinkedList, strategy model.Strategy, firstItem *model.JudgeItem, now int64) {
 	fn, err := ParseFuncFromString(strategy.Func, strategy.Operator, strategy.RightValue)
 	if err != nil {
@@ -48,13 +54,14 @@ func judgeItemWithStrategy(L *SafeLinkedList, strategy model.Strategy, firstItem
 		return
 	}
 
+	// historyData内保存了limit个历史数据
 	historyData, leftValue, isTriggered, isEnough := fn.Compute(L)
 	if !isEnough {
 		return
 	}
 
 	event := &model.Event{
-		Id:         fmt.Sprintf("s_%d_%s", strategy.Id, firstItem.PrimaryKey()),
+		Id:         fmt.Sprintf("s_%d_%s", strategy.Id, firstItem.PrimaryKey()), //event id由strategy.Id和item key构成
 		Strategy:   &strategy,
 		Endpoint:   firstItem.Endpoint,
 		LeftValue:  leftValue,
@@ -62,9 +69,11 @@ func judgeItemWithStrategy(L *SafeLinkedList, strategy model.Strategy, firstItem
 		PushedTags: firstItem.Tags,
 	}
 
+	// 判断是否发送Problem或OK报警
 	sendEventIfNeed(historyData, isTriggered, now, event, strategy.MaxStep)
 }
 
+// 发送event到redis
 func sendEvent(event *model.Event) {
 	// update last event
 	g.LastEvents.Set(event.Id, event)
@@ -75,6 +84,7 @@ func sendEvent(event *model.Event) {
 		return
 	}
 
+	// 每个告警级别一个队列
 	// send to redis
 	redisKey := fmt.Sprintf(g.Config().Alarm.QueuePattern, event.Priority())
 	rc := g.RedisConnPool.Get()
@@ -188,6 +198,7 @@ func judgeItemWithExpression(L *SafeLinkedList, expression *model.Expression, fi
 
 }
 
+// 判断是否发送Problem或OK报警
 func sendEventIfNeed(historyData []*model.HistoryData, isTriggered bool, now int64, event *model.Event, maxStep int) {
 	lastEvent, exists := g.LastEvents.Get(event.Id)
 	if isTriggered {
@@ -211,12 +222,16 @@ func sendEventIfNeed(historyData []*model.HistoryData, isTriggered bool, now int
 			return
 		}
 
+		// 这里确保limit个数据之后才再次报警，比如max(#3) > 3,历史值为2、4、4，那么第一个4第一次触发报警，
+		// 最后这个4不会报警，需要到历史数据为2、4、4、5、6,即第一个报警的4不在#3的位置时才再次触发，
+		// 这时记录的EventTime为最后6出现的时间，所以需要再等三个数据才会触发第三次报警
 		if historyData[len(historyData)-1].Timestamp <= lastEvent.EventTime {
 			// 产生过报警的点，就不能再使用来判断了，否则容易出现一分钟报一次的情况
 			// 只需要拿最后一个historyData来做判断即可，因为它的时间最老
 			return
 		}
 
+		// 最小报警间隔，取limit*step和MinInterval的较大值
 		if now-lastEvent.EventTime < g.Config().Alarm.MinInterval {
 			// 报警不能太频繁，两次报警之间至少要间隔MinInterval秒，否则就不能报警
 			return
