@@ -1,10 +1,12 @@
 package cron
 
 import (
-	"github.com/open-falcon/judge/store"
 	"time"
+
+	"github.com/open-falcon/judge/store"
 )
 
+// 周期性清理7天前的数据，比如监测点或主机被删除，释放内存
 func CleanStale() {
 	for {
 		time.Sleep(time.Hour * 5)
@@ -12,6 +14,7 @@ func CleanStale() {
 	}
 }
 
+// 清理7天前的数据，比如监测点或主机被删除，释放内存
 func cleanStale() {
 	before := time.Now().Unix() - 3600*24*7
 

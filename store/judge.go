@@ -9,6 +9,7 @@ import (
 	"github.com/open-falcon/judge/g"
 )
 
+// 进行策略匹配，告警event发送
 func Judge(L *SafeLinkedList, firstItem *model.JudgeItem, now int64) {
 	CheckStrategy(L, firstItem, now)
 	CheckExpression(L, firstItem, now)
@@ -93,6 +94,7 @@ func sendEvent(event *model.Event) {
 }
 
 func CheckExpression(L *SafeLinkedList, firstItem *model.JudgeItem, now int64) {
+	// 根据JudgeItem生成可能的key
 	keys := buildKeysFromMetricAndTags(firstItem)
 	if len(keys) == 0 {
 		return
@@ -103,14 +105,17 @@ func CheckExpression(L *SafeLinkedList, firstItem *model.JudgeItem, now int64) {
 
 	expressionMap := g.ExpressionMap.Get()
 	for _, key := range keys {
+		// 根据key获取expression列表，key为Metric/tag1=val1或者Metric/Endpoint=end，不同的key会匹配到相同的expression
 		expressions, exists := expressionMap[key]
 		if !exists {
 			continue
 		}
 
+		// 过滤出firstItem符合每个expression所有tag的expression
 		related := filterRelatedExpressions(expressions, firstItem)
 		for _, exp := range related {
 			if _, ok := handledExpression[exp.Id]; ok {
+				// 已经有key指向此expression
 				continue
 			}
 			handledExpression[exp.Id] = struct{}{}
@@ -119,14 +124,17 @@ func CheckExpression(L *SafeLinkedList, firstItem *model.JudgeItem, now int64) {
 	}
 }
 
+// 根据JudgeItem生成可能的key
 func buildKeysFromMetricAndTags(item *model.JudgeItem) (keys []string) {
 	for k, v := range item.Tags {
+		// 每个tag生成一个key
 		keys = append(keys, fmt.Sprintf("%s/%s=%s", item.Metric, k, v))
 	}
 	keys = append(keys, fmt.Sprintf("%s/endpoint=%s", item.Metric, item.Endpoint))
 	return
 }
 
+// 过滤出符合expression tag的expression
 func filterRelatedExpressions(expressions []*model.Expression, firstItem *model.JudgeItem) []*model.Expression {
 	size := len(expressions)
 	if size == 0 {
@@ -142,10 +150,12 @@ func filterRelatedExpressions(expressions []*model.Expression, firstItem *model.
 		itemTagsCopy := firstItem.Tags
 		// 注意：exp.Tags 中可能会有一个endpoint=xxx的tag
 		if _, ok := exp.Tags["endpoint"]; ok {
+			// 需要匹配endpoint,将firstItem的endpoint提取出来，作为tag保存到itemTagsCopy
 			itemTagsCopy = copyItemTags(firstItem)
 		}
 
 		for tagKey, tagVal := range exp.Tags {
+			// expression的tag必须全在firstItem才行，first的tag可以更多
 			if myVal, exists := itemTagsCopy[tagKey]; !exists || myVal != tagVal {
 				related = false
 				break
@@ -162,6 +172,7 @@ func filterRelatedExpressions(expressions []*model.Expression, firstItem *model.
 	return exps
 }
 
+// 复制tags，将endpoint加入tags
 func copyItemTags(item *model.JudgeItem) map[string]string {
 	ret := make(map[string]string)
 	ret["endpoint"] = item.Endpoint
@@ -173,6 +184,7 @@ func copyItemTags(item *model.JudgeItem) map[string]string {
 	return ret
 }
 
+// 判断是否触发expression,并判断是否发送event
 func judgeItemWithExpression(L *SafeLinkedList, expression *model.Expression, firstItem *model.JudgeItem, now int64) {
 	fn, err := ParseFuncFromString(expression.Func, expression.Operator, expression.RightValue)
 	if err != nil {
@@ -186,7 +198,7 @@ func judgeItemWithExpression(L *SafeLinkedList, expression *model.Expression, fi
 	}
 
 	event := &model.Event{
-		Id:         fmt.Sprintf("e_%d_%s", expression.Id, firstItem.PrimaryKey()),
+		Id:         fmt.Sprintf("e_%d_%s", expression.Id, firstItem.PrimaryKey()), //event id由expression.Id和item key构成
 		Expression: expression,
 		Endpoint:   firstItem.Endpoint,
 		LeftValue:  leftValue,

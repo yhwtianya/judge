@@ -9,6 +9,7 @@ import (
 	"github.com/open-falcon/common/model"
 )
 
+// 阈值计算接口
 type Function interface {
 	Compute(L *SafeLinkedList) (vs []*model.HistoryData, leftValue float64, isTriggered bool, isEnough bool)
 }

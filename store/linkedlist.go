@@ -105,7 +105,7 @@ func (this *SafeLinkedList) PushFront(v interface{}) *list.Element {
 	return this.L.PushFront(v)
 }
 
-// 先对合法性进行检查，然后首部插入数据
+// 先对合法性进行检查，然后首部插入数据，只保存maxCount个数据
 // @return needJudge 如果是false不需要做judge，因为新上来的数据不合法
 func (this *SafeLinkedList) PushFrontAndMaintain(v *model.JudgeItem, maxCount int) bool {
 	this.Lock()

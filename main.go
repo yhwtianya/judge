@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+
 	"github.com/open-falcon/judge/cron"
 	"github.com/open-falcon/judge/g"
 	"github.com/open-falcon/judge/http"
 	"github.com/open-falcon/judge/rpc"
 	"github.com/open-falcon/judge/store"
-	"os"
 )
 
 func main() {

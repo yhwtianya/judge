@@ -2,14 +2,17 @@ package http
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/open-falcon/common/utils"
 	"github.com/open-falcon/judge/g"
 	"github.com/open-falcon/judge/store"
-	"net/http"
-	"strings"
 )
 
+// 查询缓存等数据信息
 func configInfoRoutes() {
+	// 查询strategy
 	// e.g. /strategy/lg-dinp-docker01.bj/cpu.idle
 	http.HandleFunc("/strategy/", func(w http.ResponseWriter, r *http.Request) {
 		urlParam := r.URL.Path[len("/strategy/"):]
@@ -17,6 +20,7 @@ func configInfoRoutes() {
 		RenderDataJson(w, m[urlParam])
 	})
 
+	// 查询expression
 	// e.g. /expression/net.port.listen/port=22
 	http.HandleFunc("/expression/", func(w http.ResponseWriter, r *http.Request) {
 		urlParam := r.URL.Path[len("/expression/"):]
@@ -24,6 +28,7 @@ func configInfoRoutes() {
 		RenderDataJson(w, m[urlParam])
 	})
 
+	// 查询缓存总数量
 	http.HandleFunc("/count", func(w http.ResponseWriter, r *http.Request) {
 		sum := 0
 		arr := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"}
@@ -37,6 +42,7 @@ func configInfoRoutes() {
 		w.Write([]byte(out))
 	})
 
+	// 查询item最新数据
 	http.HandleFunc("/history/", func(w http.ResponseWriter, r *http.Request) {
 		urlParam := r.URL.Path[len("/history/"):]
 		pk := utils.Md5(urlParam)
